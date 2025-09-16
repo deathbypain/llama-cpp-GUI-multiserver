@@ -680,7 +680,11 @@ class LlamaServerGUI:
             load_path = self.config_file
 
         if not os.path.exists(load_path):
-            Messagebox.show_warning(f"Config file not found: {load_path}", "Not Found")
+            # If the user explicitly asked to browse or provided a path, warn them.
+            # If this is the startup default (neither browse nor path provided),
+            # silently return so the UI keeps its default values.
+            if browse or path:
+                Messagebox.show_warning(f"Config file not found: {load_path}", "Not Found")
             return
 
         try:
