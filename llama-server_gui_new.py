@@ -217,10 +217,10 @@ class LlamaServerGUI:
         self.numa = tk.BooleanVar(value=False)
         self.create_checkbutton(mem_group, "NUMA Optimizations (--numa)", self.numa, "Enable NUMA-aware optimizations for specific hardware.", row=4)
         # --- Cache Type for Draft K/V (moved here from Speculative Decoding)
-        cache_types = ["f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1"]
-        self.cache_type_k = tk.StringVar(value="f16")
+        cache_types = ["", "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1"]
+        self.cache_type_k = tk.StringVar(value="")
         self.create_combobox(mem_group, "Cache Type K (-ctk, --cache-type-k):", self.cache_type_k, "KV cache data type for K (default: f16).", cache_types, row=5)
-        self.cache_type_v = tk.StringVar(value="f16")
+        self.cache_type_v = tk.StringVar(value="")
         self.create_combobox(mem_group, "Cache Type V (-ctv, --cache-type-v):", self.cache_type_v, "KV cache data type for V (default: f16).", cache_types, row=6)
 
         # --- Speculative Decoding ---
@@ -748,15 +748,15 @@ class LlamaServerGUI:
             self.top_k.set(config.get('top_k', ''))
             self.top_p.set(config.get('top_p', ''))
             self.repeat_penalty.set(config.get('repeat_penalty', ''))
-            # Load cache type settings (defaults to f16)
+            # Load cache type settings (default: none / empty)
             try:
-                self.cache_type_k.set(config.get('cache_type_k', 'f16'))
+                self.cache_type_k.set(config.get('cache_type_k', ''))
             except Exception:
-                self.cache_type_k.set('f16')
+                self.cache_type_k.set('')
             try:
-                self.cache_type_v.set(config.get('cache_type_v', 'f16'))
+                self.cache_type_v.set(config.get('cache_type_v', ''))
             except Exception:
-                self.cache_type_v.set('f16')
+                self.cache_type_v.set('')
             
             # Update pointer to currently-loaded config
             self.config_file = load_path
