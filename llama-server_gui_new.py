@@ -71,9 +71,9 @@ class LlamaServerGUI:
         # Left-aligned buttons
         left_button_frame = ttk.Frame(control_frame)
         left_button_frame.pack(side=tk.LEFT)
-        # 'Save As' lets user pick filename/location; 'Load (Browse)' opens a file dialog to choose config
+        # Save = Save As (choose name) and Load = Browse and pick a config
         self.create_button(left_button_frame, "Save As 💾", self.save_config, "Save the current settings to a chosen file.", bootstyle="secondary")
-        self.create_button(left_button_frame, "Load (Browse) 📂", self.browse_and_load_config, "Browse and load a configuration JSON file.", bootstyle="secondary")
+        self.create_button(left_button_frame, "Load (Browse) 📂", lambda: self.load_config(browse=True), "Browse and load a saved config.", bootstyle="secondary")
         self.create_button(left_button_frame, "Generate Command ⚡", self.show_command, "Show the final command to be executed.", bootstyle="info")
 
         # Right-aligned buttons
@@ -597,8 +597,13 @@ class LlamaServerGUI:
     def clear_output(self):
         self.output_text.delete(1.0, tk.END)
 
-    def save_config(self):
-        # Save the current configuration to a user-chosen file (Save As)
+    def save_config(self, path=None):
+        """Save the current configuration.
+
+        If path is None, show a Save As dialog to choose a filename. The file will be
+        saved inside a 'configs' directory next to the script (created if missing), and
+        will be given a .json extension if omitted. After saving, update self.config_file.
+        """
         config = {
             'model_path': self.model_path.get(), 'alias': self.alias.get(),
             'lora_path': self.lora_path.get(), 'mmproj_path': self.mmproj_path.get(),
@@ -619,36 +624,68 @@ class LlamaServerGUI:
             'repeat_penalty': self.repeat_penalty.get()
         }
         try:
-            # Ask user where to save the config
-            save_path = filedialog.asksaveasfilename(
-                title="Save Configuration As",
-                defaultextension='.json',
-                filetypes=[('JSON files', '*.json'), ('All files', '*.*')],
-                initialfile=os.path.basename(self.config_file)
-            )
-            if not save_path:
-                return
+            # Determine where to save: prefer provided path, otherwise show Save As dialog
+            if path is None:
+                # Ensure configs directory exists next to the script
+                configs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'configs')
+                os.makedirs(configs_dir, exist_ok=True)
 
-            with open(save_path, 'w') as f:
+                save_path = filedialog.asksaveasfilename(
+                    title="Save Configuration As",
+                    defaultextension='.json',
+                    filetypes=[('JSON files', '*.json'), ('All files', '*.*')],
+                    initialdir=configs_dir,
+                    initialfile='config-'
+                )
+                if not save_path:
+                    return
+            else:
+                save_path = path
+
+            # Ensure .json extension
+            if not save_path.lower().endswith('.json'):
+                save_path = save_path + '.json'
+
+            with open(save_path, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=4)
-            # Update current config file path so future loads/saves use this
+
+            # Update current config file pointer
             self.config_file = save_path
             Messagebox.ok(f"Configuration saved to {save_path}", "Success")
         except Exception as e:
             Messagebox.show_error(f"Failed to save configuration: {e}", "Error")
 
-    def load_config(self, path=None):
-        """Load configuration from disk. If path is provided, load from that file and
-        update self.config_file to the new path. Otherwise load from the current config_file."""
-        load_path = path or self.config_file
+    def load_config(self, path=None, browse=False):
+        """Load configuration.
+
+        If browse=True or path is provided, open a file dialog (or load provided path).
+        If neither is provided, load from self.config_file (used on startup).
+        """
+        load_path = None
+        # If user requested browsing, show open dialog populated from configs dir
+        if browse:
+            configs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'configs')
+            os.makedirs(configs_dir, exist_ok=True)
+            chosen = filedialog.askopenfilename(
+                title="Select Configuration",
+                filetypes=[('JSON files', '*.json'), ('All files', '*.*')],
+                initialdir=configs_dir
+            )
+            if not chosen:
+                return
+            load_path = chosen
+        elif path:
+            load_path = path
+        else:
+            load_path = self.config_file
+
         if not os.path.exists(load_path):
+            Messagebox.show_warning(f"Config file not found: {load_path}", "Not Found")
             return
+
         try:
-            with open(load_path, 'r') as f:
+            with open(load_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-            # If loading from a different path, update the saved config path
-            if path:
-                self.config_file = load_path
             
             # Load values, providing defaults for missing keys
             self.model_path.set(config.get('model_path', ''))
@@ -697,19 +734,12 @@ class LlamaServerGUI:
             self.top_p.set(config.get('top_p', ''))
             self.repeat_penalty.set(config.get('repeat_penalty', ''))
             
+            # Update pointer to currently-loaded config
+            self.config_file = load_path
+
             self.update_all_sliders()
         except Exception as e:
             Messagebox.show_error(f"Failed to load configuration: {e}", "Error")
-
-    def browse_and_load_config(self):
-        """Prompt the user to choose a JSON config file to load."""
-        filename = filedialog.askopenfilename(
-            title="Open Configuration File",
-            filetypes=[('JSON files', '*.json'), ('All files', '*.*')]
-        )
-        if not filename:
-            return
-        self.load_config(filename)
 
     def open_browser(self):
         host = self.host.get().strip()
