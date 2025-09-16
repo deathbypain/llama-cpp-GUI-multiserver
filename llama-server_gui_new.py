@@ -216,6 +216,12 @@ class LlamaServerGUI:
         self.create_checkbutton(mem_group, "No Memory Mapping (--no-mmap)", self.no_mmap, "Disable memory mapping of the model file.", row=3)
         self.numa = tk.BooleanVar(value=False)
         self.create_checkbutton(mem_group, "NUMA Optimizations (--numa)", self.numa, "Enable NUMA-aware optimizations for specific hardware.", row=4)
+        # --- Cache Type for Draft K/V (moved here from Speculative Decoding)
+        cache_types = ["f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1"]
+        self.cache_type_k = tk.StringVar(value="f16")
+        self.create_combobox(mem_group, "Cache Type K (-ctk, --cache-type-k):", self.cache_type_k, "KV cache data type for K (default: f16).", cache_types, row=5)
+        self.cache_type_v = tk.StringVar(value="f16")
+        self.create_combobox(mem_group, "Cache Type V (-ctv, --cache-type-v):", self.cache_type_v, "KV cache data type for V (default: f16).", cache_types, row=6)
 
         # --- Speculative Decoding ---
         spec_group = ttk.Labelframe(parent, text="Speculative Decoding", padding="10")
@@ -226,6 +232,7 @@ class LlamaServerGUI:
         self.create_spinbox(spec_group, "Draft GPU Layers (-ngld):", self.draft_gpu_layers, "Number of GPU layers for the draft model.", row=1, from_=0, to=99, increment=1)
         self.draft_tokens = tk.StringVar(value="")
         self.create_spinbox(spec_group, "Draft Tokens (--draft):", self.draft_tokens, "Number of tokens to draft (e.g., 5).", row=2, from_=1, to=1024, increment=1)
+        
 
     def setup_server_api_tab(self, parent):
         """Configures the 'Server & API' tab for network, access, and logging."""
@@ -477,7 +484,8 @@ class LlamaServerGUI:
             '--draft': self.draft_tokens, '--n-cpu-moe': self.moe_cpu_layers,
             '--reasoning-format': self.reasoning_format, '-ub': self.ubatch_size,
             '-n': self.n_predict, '--temp': self.temp, '--top-k': self.top_k,
-            '--top-p': self.top_p, '--repeat-penalty': self.repeat_penalty
+            '--top-p': self.top_p, '--repeat-penalty': self.repeat_penalty,
+            '--cache-type-k': self.cache_type_k, '--cache-type-v': self.cache_type_v
         }
         for flag, var in args.items():
             if var.get().strip():
@@ -622,6 +630,7 @@ class LlamaServerGUI:
             'n_predict': self.n_predict.get(), 'ignore_eos': self.ignore_eos.get(),
             'temp': self.temp.get(), 'top_k': self.top_k.get(), 'top_p': self.top_p.get(),
             'repeat_penalty': self.repeat_penalty.get()
+            , 'cache_type_k': self.cache_type_k.get(), 'cache_type_v': self.cache_type_v.get()
         }
         try:
             # Determine where to save: prefer provided path, otherwise show Save As dialog
@@ -739,6 +748,15 @@ class LlamaServerGUI:
             self.top_k.set(config.get('top_k', ''))
             self.top_p.set(config.get('top_p', ''))
             self.repeat_penalty.set(config.get('repeat_penalty', ''))
+            # Load cache type settings (defaults to f16)
+            try:
+                self.cache_type_k.set(config.get('cache_type_k', 'f16'))
+            except Exception:
+                self.cache_type_k.set('f16')
+            try:
+                self.cache_type_v.set(config.get('cache_type_v', 'f16'))
+            except Exception:
+                self.cache_type_v.set('f16')
             
             # Update pointer to currently-loaded config
             self.config_file = load_path
