@@ -71,8 +71,9 @@ class LlamaServerGUI:
         # Left-aligned buttons
         left_button_frame = ttk.Frame(control_frame)
         left_button_frame.pack(side=tk.LEFT)
-        self.create_button(left_button_frame, "Save Config 💾", self.save_config, "Save the current settings.", bootstyle="secondary")
-        self.create_button(left_button_frame, "Load Config 📂", self.load_config, "Load settings from the config file.", bootstyle="secondary")
+        # 'Save As' lets user pick filename/location; 'Load (Browse)' opens a file dialog to choose config
+        self.create_button(left_button_frame, "Save As 💾", self.save_config, "Save the current settings to a chosen file.", bootstyle="secondary")
+        self.create_button(left_button_frame, "Load (Browse) 📂", self.browse_and_load_config, "Browse and load a configuration JSON file.", bootstyle="secondary")
         self.create_button(left_button_frame, "Generate Command ⚡", self.show_command, "Show the final command to be executed.", bootstyle="info")
 
         # Right-aligned buttons
@@ -597,6 +598,7 @@ class LlamaServerGUI:
         self.output_text.delete(1.0, tk.END)
 
     def save_config(self):
+        # Save the current configuration to a user-chosen file (Save As)
         config = {
             'model_path': self.model_path.get(), 'alias': self.alias.get(),
             'lora_path': self.lora_path.get(), 'mmproj_path': self.mmproj_path.get(),
@@ -617,17 +619,36 @@ class LlamaServerGUI:
             'repeat_penalty': self.repeat_penalty.get()
         }
         try:
-            with open(self.config_file, 'w') as f:
+            # Ask user where to save the config
+            save_path = filedialog.asksaveasfilename(
+                title="Save Configuration As",
+                defaultextension='.json',
+                filetypes=[('JSON files', '*.json'), ('All files', '*.*')],
+                initialfile=os.path.basename(self.config_file)
+            )
+            if not save_path:
+                return
+
+            with open(save_path, 'w') as f:
                 json.dump(config, f, indent=4)
-            Messagebox.ok(f"Configuration saved to {self.config_file}", "Success")
+            # Update current config file path so future loads/saves use this
+            self.config_file = save_path
+            Messagebox.ok(f"Configuration saved to {save_path}", "Success")
         except Exception as e:
             Messagebox.show_error(f"Failed to save configuration: {e}", "Error")
 
-    def load_config(self):
-        if not os.path.exists(self.config_file): return
+    def load_config(self, path=None):
+        """Load configuration from disk. If path is provided, load from that file and
+        update self.config_file to the new path. Otherwise load from the current config_file."""
+        load_path = path or self.config_file
+        if not os.path.exists(load_path):
+            return
         try:
-            with open(self.config_file, 'r') as f:
+            with open(load_path, 'r') as f:
                 config = json.load(f)
+            # If loading from a different path, update the saved config path
+            if path:
+                self.config_file = load_path
             
             # Load values, providing defaults for missing keys
             self.model_path.set(config.get('model_path', ''))
@@ -679,6 +700,16 @@ class LlamaServerGUI:
             self.update_all_sliders()
         except Exception as e:
             Messagebox.show_error(f"Failed to load configuration: {e}", "Error")
+
+    def browse_and_load_config(self):
+        """Prompt the user to choose a JSON config file to load."""
+        filename = filedialog.askopenfilename(
+            title="Open Configuration File",
+            filetypes=[('JSON files', '*.json'), ('All files', '*.*')]
+        )
+        if not filename:
+            return
+        self.load_config(filename)
 
     def open_browser(self):
         host = self.host.get().strip()
