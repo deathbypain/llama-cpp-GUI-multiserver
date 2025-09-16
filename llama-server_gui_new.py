@@ -626,8 +626,9 @@ class LlamaServerGUI:
         try:
             # Determine where to save: prefer provided path, otherwise show Save As dialog
             if path is None:
-                # Ensure configs directory exists next to the script
-                configs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'configs')
+                # Ensure configs directory exists next to the executable/script
+                app_dir = os.path.dirname(self.get_config_path(''))
+                configs_dir = os.path.join(app_dir, 'configs')
                 os.makedirs(configs_dir, exist_ok=True)
 
                 save_path = filedialog.asksaveasfilename(
@@ -664,7 +665,8 @@ class LlamaServerGUI:
         load_path = None
         # If user requested browsing, show open dialog populated from configs dir
         if browse:
-            configs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'configs')
+            app_dir = os.path.dirname(self.get_config_path(''))
+            configs_dir = os.path.join(app_dir, 'configs')
             os.makedirs(configs_dir, exist_ok=True)
             chosen = filedialog.askopenfilename(
                 title="Select Configuration",
