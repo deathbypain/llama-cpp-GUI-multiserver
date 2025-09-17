@@ -6,7 +6,7 @@
     "chat_template": "",
     "reasoning_effort": "",
     "jinja": true,
-    "ctx_size": 131072,
+    "ctx_size": 0,
     "gpu_layers": 99,
     "threads": "",
     "batch_size": "",
@@ -39,5 +39,7 @@
     "temp": "1.0",
     "top_k": "",
     "top_p": "1.0",
-    "repeat_penalty": ""
+    "repeat_penalty": "",
+    "cache_type_k": "",
+    "cache_type_v": ""
 }

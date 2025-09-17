@@ -783,7 +783,7 @@ class LlamaServerGUI:
 
         image = self.load_app_icon()
         menu_items = [
-            item('Show Window', self.show_window),
+            item('Show Window', self.show_window, default=True),
             item('Open Browser', self.open_browser_from_tray, enabled=lambda i: self.is_running),
             pystray.Menu.SEPARATOR,
             item('Quit Application', self.quit_application),
