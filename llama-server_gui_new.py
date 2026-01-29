@@ -3,8 +3,8 @@ import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from ttkbootstrap.dialogs import Messagebox
-from ttkbootstrap.scrolled import ScrolledText, ScrolledFrame
-from ttkbootstrap.tooltip import ToolTip
+from ttkbootstrap.widgets.scrolled import ScrolledText, ScrolledFrame
+from ttkbootstrap.widgets import ToolTip
 from tkinter import filedialog
 
 import subprocess
