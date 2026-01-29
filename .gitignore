@@ -10,3 +10,6 @@ dist/
 .vscode/
 .idea/
 cline.gbnf
+
+## Experimental files
+*.test.py
