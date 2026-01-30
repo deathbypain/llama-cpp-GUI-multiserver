@@ -13,3 +13,4 @@ cline.gbnf
 
 ## Experimental files
 *.test.py
+!archive/*.test.py
