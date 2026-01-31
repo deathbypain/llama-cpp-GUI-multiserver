@@ -1,5 +1,5 @@
 """Flextabs-based UI implementation using core modules."""
-
+import os
 import tkinter as tk
 from tkinter import filedialog
 import ttkbootstrap as ttk
@@ -11,7 +11,6 @@ from flextabs import TabManager, TabConfig, TabContent
 from dataclasses import asdict
 
 from core import ServerManager, ServerConfig, ConfigHandler, TrayManager, browse_file
-
 
 class TabContentExtension(TabContent):
     """Extension of flextabs.TabContent to add common functionality."""
@@ -153,8 +152,7 @@ class ServerTabContent(TabContentExtension):
         self.root = self.frame.winfo_toplevel()
         state = ServerTabState(self.frame)
         state.server_id = self.tab_id
-        self.app.register_tab_state(self.tab_id, state)
-
+                
         control_frame = ttk.Frame(self.frame)
         control_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(10, 0))
 
@@ -326,6 +324,33 @@ class ServerTabContent(TabContentExtension):
             Messagebox.ok("Command copied to clipboard!", "Copied", parent=cmd_window)
         ttk.Button(cmd_window, text="Copy to Clipboard", command=copy_command).pack(pady=10)
 
+    def update_tab_label(self, state):
+        """Update the FlexTabs server tab label based on alias or model name."""
+        alias = state.alias.get().strip()
+        model_path = state.model_path.get()
+        
+        # Prefer alias, fallback to model filename
+        if alias:
+            label = alias
+        elif model_path:
+            label = os.path.basename(model_path)
+        else:
+            label = "New Server"
+       
+        try:
+            notebook = self.app.tab_manager.notebook
+
+            # Walk up from self.frame to find the direct child of the notebook
+            tab_widget = self.frame
+            parent = tab_widget.nametowidget(tab_widget.winfo_parent())
+            while parent != notebook:
+                tab_widget = parent
+                parent = tab_widget.nametowidget(tab_widget.winfo_parent())
+
+            notebook.tab(tab_widget, text=label)
+        except Exception as e:
+            print(f"Failed to update tab label: {e}")
+    
     def start_server(self, state):
         if state.is_running:
             return
@@ -424,6 +449,7 @@ class ServerTabContent(TabContentExtension):
             return
 
         self.apply_config_dict(state, config)
+        self.update_tab_label(state)  # Refresh tab label after load
 
     def open_browser(self, state):
         config = self.build_config(state)
@@ -437,8 +463,22 @@ class ServerTabContent(TabContentExtension):
         """Configures the 'Model' tab for model files, extensions, and chat behavior."""
         model_group = ttk.Labelframe(parent, text="Primary Model", padding="10")
         model_group.pack(fill=tk.X, pady=5)
-        self.create_file_entry(model_group, "Model Path (-m):", state.model_path, "Path to the GGUF model file.", ".gguf", row=0)
-        self.create_entry(model_group, "Model Alias (-a):", state.alias, "Set an alias for the model (used in API calls).", row=1)
+        
+        # Create the model path entry and bind focus out event
+        model_path_entry = self.create_file_entry(
+            model_group,
+            "Model Path (-m):",
+            state.model_path,
+            "Path to the GGUF model file.",
+            ".gguf",
+            row=0,
+            on_change=lambda: self.update_tab_label(state)
+        )
+        model_path_entry.bind("<FocusOut>", lambda e: self.update_tab_label(state))
+        
+        # Create the alias entry and bind focus out event
+        alias_entry = self.create_entry(model_group, "Model Alias (-a):", state.alias, "Set an alias for the model (used in API calls).", row=1)
+        alias_entry.bind("<FocusOut>", lambda e: self.update_tab_label(state))
 
         ext_group = ttk.Labelframe(parent, text="Model Extensions", padding="10")
         ext_group.pack(fill=tk.X, pady=5)
@@ -561,7 +601,7 @@ class ServerTabContent(TabContentExtension):
         ToolTip(clear_btn, "Clear all text from the log output window.")
 
     # --- UI Helper Methods ---
-    def create_file_entry(self, parent, label_text, string_var, tooltip_text, file_ext, row):
+    def create_file_entry(self, parent, label_text, string_var, tooltip_text, file_ext, row, on_change=None):
         label = ttk.Label(parent, text=label_text)
         label.grid(row=row, column=0, sticky=tk.W, padx=5, pady=5)
         file_path_frame = ttk.Frame(parent)
@@ -572,13 +612,14 @@ class ServerTabContent(TabContentExtension):
         browse_btn = ttk.Button(
             file_path_frame,
             text="Browse",
-            command=lambda: browse_file(string_var, file_ext),  # Use the imported function
+            command=lambda: (browse_file(string_var, file_ext), on_change() if on_change else None),
             bootstyle="primary"
         )
         browse_btn.pack(side=tk.RIGHT)
         ToolTip(label, text=tooltip_text)
         ToolTip(entry, text=tooltip_text)
         ToolTip(browse_btn, text=f"Select a {file_ext} file.")
+        return entry
 
     def create_entry(self, parent, label_text, string_var, tooltip_text, row):
         label = ttk.Label(parent, text=label_text)
@@ -588,7 +629,8 @@ class ServerTabContent(TabContentExtension):
         parent.columnconfigure(1, weight=1)
         ToolTip(label, text=tooltip_text)
         ToolTip(entry, text=tooltip_text)
-
+        return entry
+    
     def create_spinbox(self, parent, label_text, variable, tooltip_text, from_, to, increment, row):
         label = ttk.Label(parent, text=label_text)
         label.grid(row=row, column=0, sticky=tk.W, padx=5, pady=5)
@@ -789,9 +831,6 @@ class FlextabsApp:
         self.tab_manager.open_tab("help")
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_window_close)
-
-    def register_tab_state(self, tab_id, state):
-        self.tab_states[tab_id] = state
 
     def get_app_dir(self):
         import os

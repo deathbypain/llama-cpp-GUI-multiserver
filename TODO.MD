@@ -3,6 +3,7 @@
 ## Features
 - [X] Modular refactor, with flextabs to contain the server window
 - [X] Auto switch to server output when starting server
+- [X] Server flextab should dynamically change it's label to alias or model name
 - [ ] Ability to open multiple server tabs
 - [ ] Add port conflict detection
 - [ ] Implement auto-restart on crash
