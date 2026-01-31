@@ -2,7 +2,7 @@
 
 ## Features
 - [X] Modular refactor, with flextabs to contain the server window
-- [ ] Auto switch to server output when starting server
+- [X] Auto switch to server output when starting server
 - [ ] Ability to open multiple server tabs
 - [ ] Add port conflict detection
 - [ ] Implement auto-restart on crash

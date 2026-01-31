@@ -96,6 +96,7 @@ class ServerTabState:
         self.output_text = None
         self.new_arg_entry = None
         self.custom_args_list_frame = None
+        self.notebook = None                # to store the notebook reference
 
         self.custom_arguments = []
         self.slider_refs = {}
@@ -180,6 +181,7 @@ class ServerTabContent(TabContentExtension):
         
         notebook = ttk.Notebook(self.frame, bootstyle="primary")
         notebook.pack(fill=tk.BOTH, expand=True)
+        state.notebook = notebook  # Store the notebook reference in state
 
         model_frame = ttk.Frame(notebook, padding="10")
         generation_frame = ttk.Frame(notebook, padding="10")
@@ -359,6 +361,9 @@ class ServerTabContent(TabContentExtension):
             state.start_button.config(state=tk.DISABLED)
             state.stop_button.config(state=tk.NORMAL)
             state.browser_button.config(state=tk.NORMAL)
+            
+             # Auto-switch to Server Output tab (index 5)
+            state.notebook.select(5)
 
     def stop_server(self, state):
         stopped = self.server_manager.stop_server(state.server_id)
